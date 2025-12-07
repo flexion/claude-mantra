@@ -68,22 +68,50 @@ Core pattern: `.claude/context/` folder with:
 - `project.yml` - claude-mantra specific context
 - `README.md` - Directory guide
 
+### 2024-12-07 - Architecture Decision: Hook
+- Decided on **Hook** as plugin type (not MCP, skill, or agent)
+- Rationale: Hooks are lightweight, automatic, native to Claude Code, support `additionalContext` injection
+- Hook event: `UserPromptSubmit` - runs before each prompt
+
+### 2024-12-07 - Core Hook Implemented
+- Created `.claude/hooks/context-refresh.js`
+- Implemented interaction counter with state file (`~/.claude/mantra-state.json`)
+- Freshness indicator on every prompt: `📍 Context: N/50`
+- On refresh (every 50 interactions):
+  - If `.claude/context/*.yml` exists → inject those files
+  - Fallback to `CLAUDE.md` + warning about multi-file support
+- Configured hook in `.claude/settings.json`
+- Tested: indicator works, refresh triggers correctly, fallback works
+
+**Key Design Decisions:**
+1. **Hook over MCP/Agent** - Simpler, automatic, no external process
+2. **UserPromptSubmit event** - Runs on every prompt, can inject context
+3. **Freshness indicator always visible** - User always knows context staleness
+4. **YML files only on refresh** - MD files are for human reference, not injection
+5. **State in home directory** - Persists across sessions, per-user
+
 ## Open Questions
-- What plugin type best fits the use case?
 - How to orchestrate multiple plugins/tools for full domestique functionality?
-- How to surface context freshness to user without overwhelming?
-- What's the right refresh trigger (turn count, token threshold, on-demand)?
+- Should refresh interval be configurable per-project?
+- Should there be an on-demand refresh command?
 
 ## Todos
 - [x] Copy and adapt claude-domestique context files to this project
-- [ ] Deep architecture discussion: plugin type (hook vs MCP vs skill vs other)
-- [ ] Design context drift indicator (freshness visibility)
-- [ ] Design "fast but obvious" refresh mechanism
+- [x] Deep architecture discussion: plugin type (hook vs MCP vs skill vs other)
+- [x] Design context drift indicator (freshness visibility)
+- [x] Design "fast but obvious" refresh mechanism
+- [x] Implement core plugin
 - [ ] Explore multi-plugin orchestration for claude-domestique goals
-- [ ] Implement core plugin
 - [ ] Dog-food plugin on this project
+- [ ] Add configurable refresh interval
+- [ ] Add on-demand refresh trigger
+
+## Files Changed
+- `.claude/hooks/context-refresh.js` - Main hook implementation
+- `.claude/settings.json` - Hook configuration
+- `CLAUDE.md` - Project documentation
 
 ## Next Steps
-1. Architecture discussion to determine plugin type
-2. Design context drift indicator
-3. Design refresh mechanism
+1. Start dog-fooding: restart Claude Code session to activate hook
+2. Consider configurable refresh interval (read from `.claude/config.json`)
+3. Explore on-demand refresh mechanism
