@@ -150,6 +150,7 @@ function processSessionStart(input, config = {}) {
   contextParts.push(buildContextContent(cwd, cfg, reason));
 
   return {
+    systemMessage: freshnessIndicator(0, cfg.refreshInterval, true),
     hookSpecificOutput: {
       hookEventName: 'SessionStart',
       additionalContext: contextParts.join('\n')
@@ -187,6 +188,7 @@ function processUserPromptSubmit(input, config = {}) {
   saveState(cfg.stateFile, state);
 
   return {
+    systemMessage: freshnessIndicator(state.count, cfg.refreshInterval, shouldRefresh),
     hookSpecificOutput: {
       hookEventName: 'UserPromptSubmit',
       additionalContext: contextParts.join('\n')
