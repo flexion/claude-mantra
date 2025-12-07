@@ -44,6 +44,30 @@ Core pattern: `.claude/context/` folder with:
 
 6. **Relationship to claude-domestique**: Part of architecture discussion - explore orchestration of multiple plugins/tools.
 
+### 2024-12-07 - Project Initialized
+- Ran `/init` command to set up project structure
+- Created `.claude/config.json` with:
+  - Runtime: node
+  - Work items: GitHub issues
+  - Branch pattern: `issue/feature-<N>/<desc>` | `chore/<desc>`
+  - Periodic refresh: enabled (every 50 interactions)
+- Created directory structure: `.claude/{branches, sessions, context, templates}`
+
+### 2024-12-07 - Context Files Copied and Adapted
+- Copied context files from claude-domestique
+- Adapted examples for claude-mantra (hook patterns, context-refresh references)
+
+**Files created in `.claude/context/`:**
+- `format-guide.yml` - How to read/write compact YAML
+- `behavior.yml` - AI behavior rules (skeptical, evidence-based)
+- `assistant-preferences.md` - Detailed implementation protocol
+- `git.yml` - Git workflow (no attribution, HEREDOC)
+- `git-workflow.md` - Commit/PR examples
+- `sessions.yml` - Session management rules
+- `session-workflow.md` - Session patterns and templates
+- `project.yml` - claude-mantra specific context
+- `README.md` - Directory guide
+
 ## Open Questions
 - What plugin type best fits the use case?
 - How to orchestrate multiple plugins/tools for full domestique functionality?
@@ -51,11 +75,11 @@ Core pattern: `.claude/context/` folder with:
 - What's the right refresh trigger (turn count, token threshold, on-demand)?
 
 ## Todos
+- [x] Copy and adapt claude-domestique context files to this project
 - [ ] Deep architecture discussion: plugin type (hook vs MCP vs skill vs other)
 - [ ] Design context drift indicator (freshness visibility)
 - [ ] Design "fast but obvious" refresh mechanism
 - [ ] Explore multi-plugin orchestration for claude-domestique goals
-- [ ] Copy and adapt claude-domestique context files to this project
 - [ ] Implement core plugin
 - [ ] Dog-food plugin on this project
 
