@@ -1,8 +1,11 @@
 {
   "name": "claude-mantra",
   "version": "0.1.0",
-  "description": "",
+  "description": "Periodic context refresh plugin for Claude Code sessions",
   "main": "index.js",
+  "bin": {
+    "claude-mantra": "./bin/cli.js"
+  },
   "scripts": {
     "test": "jest"
   },

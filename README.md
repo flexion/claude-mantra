@@ -19,19 +19,29 @@ Claude is brilliant. Claude is helpful. Claude also has the memory of a goldfish
 
 ## Installation
 
-### Add to existing project
+### Quick Start (Recommended)
+
+```bash
+npx claude-mantra init
+```
+
+This creates:
+- `.claude/context/` - Starter context files (both `.yml` and `.md`)
+- `.claude/hooks/` - The context refresh hook
+- `.claude/settings.json` - Hook configuration
+
+### Alternative: Copy via degit
 
 ```bash
 npx degit flexion/claude-mantra/.claude .claude
 ```
 
-This copies the `.claude/` directory (hooks, settings) into your project.
-
 ### Manual installation
 
 1. Copy `.claude/hooks/context-refresh.js` to your project
 2. Copy `.claude/settings.json` to your project
-3. Restart Claude Code session
+3. Copy example context files from `examples/context/`
+4. Restart Claude Code session
 
 ## Usage
 
@@ -44,17 +54,24 @@ Once installed, the hook runs automatically:
 
 ### Context Files
 
-Create `.claude/context/*.yml` files with your project guidance:
+Context uses a **two-tier pattern** - each topic has two files:
 
 ```
 .claude/context/
-├── behavior.yml      # AI behavior rules
-├── git.yml           # Git conventions
-├── project.yml       # Project-specific context
-└── testing.yml       # Testing patterns
+├── behavior.yml      # Compact assertions (injected by hook)
+├── behavior.md       # Detailed examples and templates
+├── git.yml
+├── git.md
+├── project.yml
+├── project.md
+├── testing.yml
+└── testing.md
 ```
 
-Use compact YAML for token efficiency. See `.claude/context/format-guide.yml` for conventions.
+- **`.yml` files** - Token-efficient assertions, injected on refresh
+- **`.md` files** - Detailed guidance, read on-demand by Claude
+
+Each `.yml` file references its companion `.md` for detailed context. See [FORMAT.md](FORMAT.md) for the full specification.
 
 If no `.claude/context/*.yml` files exist, falls back to `CLAUDE.md` with a tip about multi-file support.
 
@@ -74,7 +91,7 @@ const DEFAULT_CONFIG = {
 
 ```bash
 npm install
-npm test    # Run Jest tests (36 specs)
+npm test    # Run Jest tests (47 specs)
 ```
 
 ## Why "mantra"?
