@@ -2,10 +2,14 @@
 /**
  * claude-mantra: Periodic context refresh hook
  *
- * Runs on UserPromptSubmit to:
+ * Runs on:
+ * - SessionStart: Inject context immediately on new/resumed sessions
+ * - UserPromptSubmit: Track interaction count, refresh periodically
+ *
+ * Features:
  * 1. Track interaction count
  * 2. Show freshness indicator every prompt
- * 3. Inject context files on refresh (every N interactions)
+ * 3. Inject context files on refresh (every N interactions or session start)
  */
 
 const fs = require('fs');
@@ -94,12 +98,72 @@ function freshnessIndicator(count, refreshInterval, refreshed = false) {
 }
 
 /**
- * Core hook logic - processes input and returns output
+ * Build context content for injection
+ * @param {string} cwd - Current working directory
+ * @param {Object} cfg - Configuration
+ * @param {string} reason - Reason for refresh (e.g., "session start", "periodic")
+ * @returns {string} - Context content to inject
+ */
+function buildContextContent(cwd, cfg, reason) {
+  const contextParts = [];
+  const contextFiles = findContextFiles(cwd, cfg.contextDir);
+
+  if (contextFiles.length > 0) {
+    const contextContent = readContextFiles(contextFiles);
+    contextParts.push(`\n---\n**Context Refresh** (${reason})\n` + contextContent);
+  } else {
+    const claudeMd = readClaudeMd(cwd, cfg.claudeMd);
+    if (claudeMd) {
+      contextParts.push(`\n---\n**Context Refresh** (${reason}, from CLAUDE.md)\n` + claudeMd);
+      contextParts.push('\n⚠️ **Tip**: Multi-file context is supported in `.claude/context/`. Create `*.yml` files for modular context management.');
+    } else {
+      contextParts.push('\n⚠️ No context files found. Create `.claude/context/*.yml` or `CLAUDE.md` for context refresh.');
+    }
+  }
+
+  return contextParts.join('\n');
+}
+
+/**
+ * Process SessionStart hook - inject context immediately
  * @param {Object} input - Hook input from stdin
  * @param {Object} config - Configuration overrides
  * @returns {Object} - Hook output for stdout
  */
-function processHook(input, config = {}) {
+function processSessionStart(input, config = {}) {
+  const cfg = { ...DEFAULT_CONFIG, ...config };
+  const cwd = input.cwd || process.cwd();
+  const source = input.source || 'startup';
+
+  // Reset counter on session start
+  const state = { count: 0 };
+  saveState(cfg.stateFile, state);
+
+  // Build output
+  const contextParts = [];
+
+  // Freshness indicator shows reset state
+  contextParts.push(freshnessIndicator(0, cfg.refreshInterval, true));
+
+  // Always inject context on session start
+  const reason = `session ${source}`;
+  contextParts.push(buildContextContent(cwd, cfg, reason));
+
+  return {
+    hookSpecificOutput: {
+      hookEventName: 'SessionStart',
+      additionalContext: contextParts.join('\n')
+    }
+  };
+}
+
+/**
+ * Process UserPromptSubmit hook - track count, refresh periodically
+ * @param {Object} input - Hook input from stdin
+ * @param {Object} config - Configuration overrides
+ * @returns {Object} - Hook output for stdout
+ */
+function processUserPromptSubmit(input, config = {}) {
   const cfg = { ...DEFAULT_CONFIG, ...config };
   const cwd = input.cwd || process.cwd();
 
@@ -116,22 +180,7 @@ function processHook(input, config = {}) {
 
   // On refresh, inject context
   if (shouldRefresh) {
-    const contextFiles = findContextFiles(cwd, cfg.contextDir);
-
-    if (contextFiles.length > 0) {
-      // Use .claude/context/*.yml files
-      const contextContent = readContextFiles(contextFiles);
-      contextParts.push('\n---\n**Context Refresh**\n' + contextContent);
-    } else {
-      // Fallback to CLAUDE.md with warning
-      const claudeMd = readClaudeMd(cwd, cfg.claudeMd);
-      if (claudeMd) {
-        contextParts.push('\n---\n**Context Refresh** (from CLAUDE.md)\n' + claudeMd);
-        contextParts.push('\n⚠️ **Tip**: Multi-file context is supported in `.claude/context/`. Create `*.yml` files for modular context management.');
-      } else {
-        contextParts.push('\n⚠️ No context files found. Create `.claude/context/*.yml` or `CLAUDE.md` for context refresh.');
-      }
-    }
+    contextParts.push(buildContextContent(cwd, cfg, 'periodic'));
   }
 
   // Save updated state
@@ -143,6 +192,22 @@ function processHook(input, config = {}) {
       additionalContext: contextParts.join('\n')
     }
   };
+}
+
+/**
+ * Core hook logic - routes to appropriate handler based on event type
+ * @param {Object} input - Hook input from stdin
+ * @param {Object} config - Configuration overrides
+ * @returns {Object} - Hook output for stdout
+ */
+function processHook(input, config = {}) {
+  const eventName = input.hook_event_name || 'UserPromptSubmit';
+
+  if (eventName === 'SessionStart') {
+    return processSessionStart(input, config);
+  }
+
+  return processUserPromptSubmit(input, config);
 }
 
 // Main CLI wrapper
@@ -167,6 +232,9 @@ async function main() {
 // Export for testing
 module.exports = {
   processHook,
+  processSessionStart,
+  processUserPromptSubmit,
+  buildContextContent,
   loadState,
   saveState,
   findContextFiles,

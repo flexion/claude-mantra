@@ -4,6 +4,9 @@ const os = require('os');
 
 const {
   processHook,
+  processSessionStart,
+  processUserPromptSubmit,
+  buildContextContent,
   loadState,
   saveState,
   findContextFiles,
@@ -193,7 +196,7 @@ describe('context-refresh hook', () => {
       const result = processHook({ cwd: tmpDir }, config);
 
       expect(result.hookSpecificOutput.additionalContext).toContain('# My Project');
-      expect(result.hookSpecificOutput.additionalContext).toContain('(from CLAUDE.md)');
+      expect(result.hookSpecificOutput.additionalContext).toContain('from CLAUDE.md');
       expect(result.hookSpecificOutput.additionalContext).toContain('Multi-file context is supported');
     });
 
@@ -240,6 +243,130 @@ describe('context-refresh hook', () => {
       fs.writeFileSync(path.join(tmpDir, 'CLAUDE.md'), '# Test');
       const result = processHook({ cwd: tmpDir }, config);
       expect(result.hookSpecificOutput.additionalContext).toContain('(refreshed)');
+    });
+
+    it('routes to SessionStart handler when hook_event_name is SessionStart', () => {
+      const config = { stateFile, refreshInterval: 50 };
+      fs.writeFileSync(path.join(tmpDir, 'CLAUDE.md'), '# Test');
+
+      const result = processHook({ cwd: tmpDir, hook_event_name: 'SessionStart' }, config);
+
+      expect(result.hookSpecificOutput.hookEventName).toBe('SessionStart');
+      expect(result.hookSpecificOutput.additionalContext).toContain('(refreshed)');
+    });
+
+    it('routes to UserPromptSubmit handler by default', () => {
+      const config = { stateFile, refreshInterval: 50 };
+
+      const result = processHook({ cwd: tmpDir }, config);
+
+      expect(result.hookSpecificOutput.hookEventName).toBe('UserPromptSubmit');
+    });
+  });
+
+  describe('processSessionStart', () => {
+    it('always injects context on session start', () => {
+      const contextDir = path.join(tmpDir, '.claude', 'context');
+      fs.mkdirSync(contextDir, { recursive: true });
+      fs.writeFileSync(path.join(contextDir, 'test.yml'), 'key: value');
+
+      const config = { stateFile, refreshInterval: 50, contextDir: '.claude/context' };
+      const result = processSessionStart({ cwd: tmpDir, source: 'startup' }, config);
+
+      expect(result.hookSpecificOutput.hookEventName).toBe('SessionStart');
+      expect(result.hookSpecificOutput.additionalContext).toContain('📍 Context: 0/50 (refreshed)');
+      expect(result.hookSpecificOutput.additionalContext).toContain('### test.yml');
+      expect(result.hookSpecificOutput.additionalContext).toContain('session startup');
+    });
+
+    it('resets counter to 0 on session start', () => {
+      // Set existing state
+      fs.writeFileSync(stateFile, JSON.stringify({ count: 35 }));
+
+      const config = { stateFile, refreshInterval: 50 };
+      processSessionStart({ cwd: tmpDir, source: 'startup' }, config);
+
+      const state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+      expect(state.count).toBe(0);
+    });
+
+    it('includes source in refresh reason for startup', () => {
+      fs.writeFileSync(path.join(tmpDir, 'CLAUDE.md'), '# Test');
+      const config = { stateFile, refreshInterval: 50 };
+
+      const result = processSessionStart({ cwd: tmpDir, source: 'startup' }, config);
+
+      expect(result.hookSpecificOutput.additionalContext).toContain('session startup');
+    });
+
+    it('includes source in refresh reason for resume', () => {
+      fs.writeFileSync(path.join(tmpDir, 'CLAUDE.md'), '# Test');
+      const config = { stateFile, refreshInterval: 50 };
+
+      const result = processSessionStart({ cwd: tmpDir, source: 'resume' }, config);
+
+      expect(result.hookSpecificOutput.additionalContext).toContain('session resume');
+    });
+
+    it('includes source in refresh reason for clear', () => {
+      fs.writeFileSync(path.join(tmpDir, 'CLAUDE.md'), '# Test');
+      const config = { stateFile, refreshInterval: 50 };
+
+      const result = processSessionStart({ cwd: tmpDir, source: 'clear' }, config);
+
+      expect(result.hookSpecificOutput.additionalContext).toContain('session clear');
+    });
+
+    it('includes source in refresh reason for compact', () => {
+      fs.writeFileSync(path.join(tmpDir, 'CLAUDE.md'), '# Test');
+      const config = { stateFile, refreshInterval: 50 };
+
+      const result = processSessionStart({ cwd: tmpDir, source: 'compact' }, config);
+
+      expect(result.hookSpecificOutput.additionalContext).toContain('session compact');
+    });
+
+    it('falls back to CLAUDE.md when no yml files', () => {
+      fs.writeFileSync(path.join(tmpDir, 'CLAUDE.md'), '# My Project');
+      const config = { stateFile, refreshInterval: 50, contextDir: '.claude/context' };
+
+      const result = processSessionStart({ cwd: tmpDir, source: 'startup' }, config);
+
+      expect(result.hookSpecificOutput.additionalContext).toContain('# My Project');
+      expect(result.hookSpecificOutput.additionalContext).toContain('from CLAUDE.md');
+    });
+
+    it('shows warning when no context files at all', () => {
+      const config = { stateFile, refreshInterval: 50, contextDir: '.claude/context' };
+
+      const result = processSessionStart({ cwd: tmpDir, source: 'startup' }, config);
+
+      expect(result.hookSpecificOutput.additionalContext).toContain('No context files found');
+    });
+  });
+
+  describe('buildContextContent', () => {
+    it('builds content from yml files', () => {
+      const contextDir = path.join(tmpDir, '.claude', 'context');
+      fs.mkdirSync(contextDir, { recursive: true });
+      fs.writeFileSync(path.join(contextDir, 'test.yml'), 'key: value');
+
+      const cfg = { contextDir: '.claude/context', claudeMd: 'CLAUDE.md' };
+      const content = buildContextContent(tmpDir, cfg, 'test reason');
+
+      expect(content).toContain('**Context Refresh** (test reason)');
+      expect(content).toContain('### test.yml');
+      expect(content).toContain('key: value');
+    });
+
+    it('falls back to CLAUDE.md with reason', () => {
+      fs.writeFileSync(path.join(tmpDir, 'CLAUDE.md'), '# Guide');
+      const cfg = { contextDir: '.claude/context', claudeMd: 'CLAUDE.md' };
+
+      const content = buildContextContent(tmpDir, cfg, 'my reason');
+
+      expect(content).toContain('(my reason, from CLAUDE.md)');
+      expect(content).toContain('# Guide');
     });
   });
 });
