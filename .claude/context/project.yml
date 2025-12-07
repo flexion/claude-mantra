@@ -1,0 +1,49 @@
+# claude-mantra Project Context
+
+## Identity
+name: claude-mantra
+tagline: "I told you. You agreed. You forgot. Repeat."
+purpose: periodic context refresh plugin for Claude Code sessions
+problem: Claude drifts from guidance as context window fills
+
+## Architecture (TBD - under design)
+type: unknown (hook | MCP | skill | hybrid)
+runtime: node (cross-platform, Claude Code prerequisite)
+language: javascript/typescript
+
+## Core Concepts
+context-drift: Claude gradually forgets guidance over long sessions
+context-refresh: re-inject key files to reinforce behavior
+context-freshness: visible indicator of how stale context is
+mantra: repeated phrase to focus the mind (Claude's mind wanders, this brings it back)
+
+## Context Structure
+location: .claude/context/
+format-compact: *.yml (machine-optimized, token-efficient)
+format-verbose: *.md (human-readable, detailed examples)
+two-tier: yml for assertions, md for elaboration
+
+## Design Principles
+unobtrusive: minimal interference with actual work
+narrow-scope: do one thing well (context refresh)
+fast-refresh: quick injection, obvious acknowledgment
+token-aware: don't overwhelm context with reinforcement
+cross-platform: node-based tooling
+
+## Requirements (from ideas.txt)
+- configurable refresh intervals (turn count, token threshold, on-demand)
+- selective file targeting (refresh specific files, not entire codebase)
+- lightweight injection (summaries or full files)
+- works with CLAUDE.md, project docs, custom instruction files
+- context freshness indicator (drift detector for user)
+- dog-food on this project when mature
+
+## Open Questions
+- plugin-type: hook vs MCP vs skill vs hybrid?
+- orchestration: how to coordinate multiple plugins for full domestique?
+- drift-indicator: how to surface freshness without clutter?
+- refresh-trigger: what's the right heuristic?
+
+## Related Projects
+parent: claude-domestique (full workflow system)
+upstream: https://github.com/flexion/claude-mantra.git
