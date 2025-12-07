@@ -90,8 +90,36 @@ Core pattern: `.claude/context/` folder with:
 4. **YML files only on refresh** - MD files are for human reference, not injection
 5. **State in home directory** - Persists across sessions, per-user
 
+### 2024-12-07 - Plugin Orchestration Discussion
+Discussed architecture for multiple independent plugins that can work together.
+
+**Use Case:**
+- Plugin A (claude-mantra): context refresh
+- Plugin B (future): session recording to source control
+- When both installed, mantra could also read session file
+
+**Approaches Considered:**
+
+1. **Convention-based discovery** (simplest)
+   - Plugins follow file conventions (e.g., `.claude/context/`, `.claude/sessions/`)
+   - Each plugin scans for known patterns at runtime
+   - No explicit coordination - integration via shared locations
+
+2. **Shared manifest**
+   - `.claude/plugins.json` declares installed plugins
+   - Each plugin reads manifest to discover others
+
+3. **Single orchestrator hook** (most powerful)
+   - Meta-hook loads and coordinates plugin modules
+   - Plugins become JS modules with shared API
+   - More complex but enables richer interop
+
+**Future Direction:**
+Consider making **claude-domestique** (`/Users/dpuglielli/github/flexion/claude-domestique`) the orchestrator that coordinates multiple plugins. Individual plugins (mantra, session-recorder, etc.) work standalone but gain enhanced behavior when orchestrated together.
+
+**Not acting on this now** - recording for future architecture work.
+
 ## Open Questions
-- How to orchestrate multiple plugins/tools for full domestique functionality?
 - Should refresh interval be configurable per-project?
 - Should there be an on-demand refresh command?
 
