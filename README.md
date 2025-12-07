@@ -10,8 +10,9 @@ Claude is brilliant. Claude is helpful. Claude also has the memory of a goldfish
 
 ## Features
 
+- **Session start refresh** - Injects context immediately when sessions start, resume, or reset
 - **Freshness indicator** - Shows context staleness on every prompt (`📍 Context: 12/50`)
-- **Automatic refresh** - Re-injects context files every N interactions
+- **Periodic refresh** - Re-injects context files every N interactions
 - **Multi-file context** - Reads from `.claude/context/*.yml` for modular guidance
 - **CLAUDE.md fallback** - Works with existing CLAUDE.md if no context directory
 - **Lightweight** - Native Claude Code hook, no external dependencies
@@ -36,9 +37,10 @@ This copies the `.claude/` directory (hooks, settings) into your project.
 
 Once installed, the hook runs automatically:
 
-1. **Every prompt** shows freshness: `📍 Context: 12/50`
-2. **Every 50 prompts** triggers refresh, injecting your context files
-3. **On refresh** you'll see: `📍 Context: 0/50 (refreshed)` followed by your context
+1. **On session start** - Context is injected immediately (startup, resume, clear, compact)
+2. **Every prompt** shows freshness: `📍 Context: 12/50`
+3. **Every 50 prompts** triggers periodic refresh
+4. **On refresh** you'll see: `📍 Context: 0/50 (refreshed)` followed by your context
 
 ### Context Files
 
@@ -72,7 +74,7 @@ const DEFAULT_CONFIG = {
 
 ```bash
 npm install
-npm test    # Run Jest tests (24 specs)
+npm test    # Run Jest tests (36 specs)
 ```
 
 ## Why "mantra"?
